@@ -4,8 +4,6 @@ services:
     container_name: MyAnimeRateDB
     hostname: MyAnimeRateDB
     restart: unless-stopped
-    env_file:
-      - ../.env
     ports:
       - "5433:5432"
     environment:
@@ -15,8 +13,8 @@ services:
       - POSTGRES_DB=MyAnimeRateDB
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
-      - postgres_data:/var/lib/postgresql/data              # persistent data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql     # auto-run on first start
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 0.5s
@@ -24,23 +22,37 @@ services:
       retries: 10
 
   seeder:
-    image: python:3.12-slim
+    build: ./database
     container_name: MyAnimeRateSeeder
-    restart: "no"                                           # run once and exit
+    restart: "no"
     environment:
-      - POSTGRES_HOST=db                                    # service name, pas localhost
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=admin123
       - POSTGRES_DB=MyAnimeRateDB
     depends_on:
       db:
-        condition: service_healthy                          # attend que Postgres soit prêt
-    volumes:
-      - .:/app
-    working_dir: /app
-    command: >
-      sh -c "pip install psycopg2-binary python-dotenv -q &&
-             python seed_anime.py"
+        condition: service_healthy
+
+  api:
+    build: ./api
+    container_name: MyAnimeRateAPI
+    hostname: MyAnimeRateAPI
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin123
+      - POSTGRES_DB=MyAnimeRateDB
+    depends_on:
+      db:
+        condition: service_healthy
+      seeder:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
