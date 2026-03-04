@@ -3,14 +3,14 @@
 -- ============================================================
 
 -- Drop tables if they already exist (for a clean re-initialization)
-DROP TABLE IF EXISTS User CASCADE;
+DROP TABLE IF EXISTS Users CASCADE;
 DROP TABLE IF EXISTS Anime CASCADE;
 DROP TABLE IF EXISTS Rating CASCADE;
 
 -- ============================================================
--- TABLE : User
+-- TABLE : Users
 -- ============================================================
-CREATE TABLE User (
+CREATE TABLE Users (
     id          SERIAL PRIMARY KEY,
     username    VARCHAR(50)  NOT NULL UNIQUE,
     email       VARCHAR(255) NOT NULL UNIQUE,
@@ -23,11 +23,11 @@ CREATE TABLE User (
 CREATE TABLE Anime (
     id                  SERIAL PRIMARY KEY,
     title               VARCHAR(255) NOT NULL,
-    score               REAL         NOT NULL DEFAULT 0,
+    score               REAL,
     synopsis            TEXT,
     image_url           VARCHAR(255) NOT NULL,
-    category            VARCHAR(50)  NOT NULL,
-    episodes            INTEGER      NOT NULL,
+    category            VARCHAR(50),
+    episodes            INTEGER,              
     genres              VARCHAR(255),
     themes              VARCHAR(255),
     streaming_platforms VARCHAR(255)
@@ -38,7 +38,7 @@ CREATE TABLE Anime (
 -- ============================================================
 CREATE TABLE Rating (
     id              SERIAL PRIMARY KEY,
-    user_id         INTEGER     NOT NULL REFERENCES User(id)   ON DELETE CASCADE,
+    user_id         INTEGER     NOT NULL REFERENCES Users(id)  ON DELETE CASCADE,
     anime_id        INTEGER     NOT NULL REFERENCES Anime(id)  ON DELETE CASCADE,
     animation       REAL        NOT NULL,
     story           REAL        NOT NULL,

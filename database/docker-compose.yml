@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: MyAnimeRateDB
+    hostname: MyAnimeRateDB
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    ports:
+      - "5433:5432"
+    environment:
+      - TZ=Europe/Paris
+      - POSTGRES_PASSWORD=admin123
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=MyAnimeRateDB
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - postgres_data:/var/lib/postgresql/data              # persistent data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql     # auto-run on first start
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 0.5s
+      timeout: 0.5s
+      retries: 10
+
+  seeder:
+    image: python:3.12-slim
+    container_name: MyAnimeRateSeeder
+    restart: "no"                                           # run once and exit
+    environment:
+      - POSTGRES_HOST=db                                    # service name, pas localhost
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin123
+      - POSTGRES_DB=MyAnimeRateDB
+    depends_on:
+      db:
+        condition: service_healthy                          # attend que Postgres soit prêt
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+      sh -c "pip install psycopg2-binary python-dotenv -q &&
+             python seed_anime.py"
+
+volumes:
+  postgres_data:
