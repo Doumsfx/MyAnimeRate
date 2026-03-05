@@ -20,7 +20,7 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# ── ORM Model ─────────────────────────────────────────────────────────────────
+# ── ORM Model ──────────────────────────────────────────────────────────────────
 # These models are used to define the database schema and interact with the database using SQLAlchemy.
 class Anime(Base):
     __tablename__ = "anime"
