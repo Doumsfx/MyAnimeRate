@@ -58,6 +58,14 @@ class Rating(Base):
     ost             = Column(Float, nullable=False)
     pacing          = Column(Float, nullable=False)
 
+class Favorite(Base):
+    __tablename__ = "favorite"
+
+    id       = Column(Integer, primary_key=True, index=True)
+    user_id  = Column(Integer, nullable=False)
+    anime_id = Column(Integer, nullable=False)
+
+
 # ── Pydantic Schema ────────────────────────────────────────────────────────────
 # These schemas are used for request validation and response serialization in FastAPI.
 class AnimeSchema(BaseModel):
@@ -120,6 +128,22 @@ class RatingCreateSchema(BaseModel):
     class Config:
         from_attributes = True
 
+class FavoriteSchema(BaseModel):
+    id:       int
+    user_id:  int
+    anime_id: int
+
+    class Config:
+        from_attributes = True
+
+class FavoriteCreateSchema(BaseModel):
+    user_id:  int
+    anime_id: int
+
+    class Config:
+        from_attributes = True
+
+
 # ── Dependency ─────────────────────────────────────────────────────────────────
 def get_db():
     db = SessionLocal()
@@ -128,13 +152,22 @@ def get_db():
     finally:
         db.close()
 
+# ── Utility functions ──────────────────────────────────────────────────────────
+def sortByScore(list: list[Anime]) -> list[Anime]:
+    """Sort a list of Anime objects by their score in descending order."""
+    return sorted(list, key=lambda anime: anime.score if anime.score is not None else 0, reverse=True)
+
+
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="MyAnimeRate API")
 
+
 # ── Routes for Anime Management ────────────────────────────────────────────────
 @app.get("/animes", response_model=list[AnimeSchema], summary="Get all animes", tags=["Animes"])
-def getAllAnimes(db: Session = Depends(get_db)):
-    return db.query(Anime).all()
+def getAllAnimes(start_id: int = Query(1, ge=1, description="ID de départ"),end_id: int = Query(50, ge=1, description="ID de fin"),db: Session = Depends(get_db)):
+    if end_id < start_id:
+        raise HTTPException(status_code=400, detail="end_id doit être supérieur ou égal à start_id")
+    return db.query(Anime).filter(Anime.id >= start_id, Anime.id <= end_id).all()
 
 @app.get("/animes/search/{name}", response_model=list[AnimeSchema], summary="Search animes by name", tags=["Animes"])
 def getAnimeByName(name: str, db: Session = Depends(get_db)):
@@ -212,3 +245,67 @@ def updateRatingById(rating_id: int, rating: RatingCreateSchema, db: Session = D
     db.commit()
     db.refresh(db_rating)
     return db_rating
+
+@app.get("/ratings/{user_id}/{anime_id}", response_model=RatingSchema, summary="Get a specific rating", tags=["Ratings"])
+def getSpecificRating(user_id: int, anime_id: int, db: Session = Depends(get_db)):
+    # Check if anime exists
+    db_anime = db.query(Anime).filter(Anime.id == anime_id).first()
+    if not db_anime:
+        raise HTTPException(status_code=404, detail=f"Anime with id {anime_id} not found")
+
+    # Check if user exists
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+
+    # Check if the user has rated this anime    
+    db_rating = db.query(Rating).filter(Rating.anime_id == anime_id, Rating.user_id == user_id).first()
+    if not db_rating:
+        raise HTTPException(status_code=404, detail=f"Rating not found for user {user_id} and anime {anime_id}")
+    
+    return db_rating
+
+
+# ── Routes for Favorite Management ───────────────────────────────────────────────
+@app.post("/favorites/add", summary="Add an anime to user's favorites", tags=["Favorites"])
+def addFavorite(favorite: FavoriteCreateSchema, db: Session = Depends(get_db)):
+    # Check if user exists
+    db_user = db.query(User).filter(User.id == favorite.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail=f"User with id {favorite.user_id} not found")
+
+    # Check if anime exists
+    db_anime = db.query(Anime).filter(Anime.id == favorite.anime_id).first()
+    if not db_anime:
+        raise HTTPException(status_code=404, detail=f"Anime with id {favorite.anime_id} not found")
+
+    # Check if the anime is already in the user's favorites
+    existing_favorite = db.query(Favorite).filter(Favorite.user_id == favorite.user_id, Favorite.anime_id == favorite.anime_id).first()
+    if existing_favorite:
+        raise HTTPException(status_code=400, detail=f"Anime with id {favorite.anime_id} is already in the favorites of user with id {favorite.user_id}")
+
+    new_favorite = Favorite(user_id=favorite.user_id, anime_id=favorite.anime_id)
+    db.add(new_favorite)
+    db.commit()
+    db.refresh(new_favorite)
+    return new_favorite
+
+@app.delete("/favorites/remove", summary="Remove an anime from user's favorites", tags=["Favorites"])
+def removeFavorite(favorite: FavoriteCreateSchema, db: Session = Depends(get_db)):
+    db_favorite = db.query(Favorite).filter(Favorite.user_id == favorite.user_id, Favorite.anime_id == favorite.anime_id).first()
+    if not db_favorite:
+        raise HTTPException(status_code=404, detail=f"Anime with id {favorite.anime_id} is not in the favorites of user with id {favorite.user_id}")
+    db.delete(db_favorite)
+    db.commit()
+    return {"detail": f"Anime with id {favorite.anime_id} removed from favorites of user with id {favorite.user_id}"}
+
+@app.get("/favorites/{user_id}", response_model=list[AnimeSchema], summary="Get all favorite animes of a user", tags=["Favorites"])
+def getFavoritesByUserId(user_id: int, db: Session = Depends(get_db)):
+    # Check if user exists
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+
+    favorites = db.query(Favorite).filter(Favorite.user_id == user_id).all()
+    anime_ids = [favorite.anime_id for favorite in favorites]
+    return db.query(Anime).filter(Anime.id.in_(anime_ids)).all()
