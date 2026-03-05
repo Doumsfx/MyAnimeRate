@@ -47,7 +47,6 @@ CREATE TABLE rating (
     endings         REAL        NOT NULL,
     ost             REAL        NOT NULL,
     pacing          REAL        NOT NULL,
-    global_score    REAL        NOT NULL,
     UNIQUE (user_id, anime_id)   -- a user can only rate an anime once
 );
 
