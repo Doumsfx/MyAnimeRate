@@ -3,24 +3,23 @@
 -- ============================================================
 
 -- Drop tables if they already exist (for a clean re-initialization)
-DROP TABLE IF EXISTS Users CASCADE;
-DROP TABLE IF EXISTS Anime CASCADE;
-DROP TABLE IF EXISTS Rating CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS anime CASCADE;
+DROP TABLE IF EXISTS rating CASCADE;
 
 -- ============================================================
--- TABLE : Users
+-- TABLE : users
 -- ============================================================
-CREATE TABLE Users (
+CREATE TABLE users (
     id          SERIAL PRIMARY KEY,
     username    VARCHAR(50)  NOT NULL UNIQUE,
-    email       VARCHAR(255) NOT NULL UNIQUE,
     password    VARCHAR(255) NOT NULL
 );
 
 -- ============================================================
--- TABLE : Anime
+-- TABLE : anime
 -- ============================================================
-CREATE TABLE Anime (
+CREATE TABLE anime (
     id                  SERIAL PRIMARY KEY,
     title               VARCHAR(255) NOT NULL,
     score               REAL,
@@ -34,12 +33,12 @@ CREATE TABLE Anime (
 );
 
 -- ============================================================
--- TABLE : Rating
+-- TABLE : rating
 -- ============================================================
-CREATE TABLE Rating (
+CREATE TABLE rating (
     id              SERIAL PRIMARY KEY,
-    user_id         INTEGER     NOT NULL REFERENCES Users(id)  ON DELETE CASCADE,
-    anime_id        INTEGER     NOT NULL REFERENCES Anime(id)  ON DELETE CASCADE,
+    user_id         INTEGER     NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
+    anime_id        INTEGER     NOT NULL REFERENCES anime(id)  ON DELETE CASCADE,
     animation       REAL        NOT NULL,
     story           REAL        NOT NULL,
     characters      REAL        NOT NULL,
@@ -47,6 +46,7 @@ CREATE TABLE Rating (
     openings        REAL        NOT NULL,
     endings         REAL        NOT NULL,
     ost             REAL        NOT NULL,
+    pacing          REAL        NOT NULL,
     global_score    REAL        NOT NULL,
     UNIQUE (user_id, anime_id)   -- a user can only rate an anime once
 );
