@@ -50,3 +50,14 @@ CREATE TABLE rating (
     global_score    REAL        NOT NULL,
     UNIQUE (user_id, anime_id)   -- a user can only rate an anime once
 );
+
+
+-- ============================================================
+-- TABLE : favorite
+-- ============================================================
+CREATE TABLE favorite (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER     NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
+    anime_id    INTEGER     NOT NULL REFERENCES anime(id)  ON DELETE CASCADE,
+    UNIQUE (user_id, anime_id)   -- a user can only have an anime once in favorites
+);
