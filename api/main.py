@@ -43,6 +43,21 @@ class User(Base):
     username = Column(String(50), nullable=False)
     password = Column(String(255), nullable=False)
 
+class Rating(Base):
+    __tablename__ = "rating"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    user_id         = Column(Integer, nullable=False)
+    anime_id        = Column(Integer, nullable=False)
+    animation       = Column(Float, nullable=False)
+    story           = Column(Float, nullable=False)
+    characters      = Column(Float, nullable=False)
+    world_building  = Column(Float, nullable=False)
+    openings        = Column(Float, nullable=False)
+    endings         = Column(Float, nullable=False)
+    ost             = Column(Float, nullable=False)
+    pacing          = Column(Float, nullable=False)
+
 # ── Pydantic Schema ────────────────────────────────────────────────────────────
 # These schemas are used for request validation and response serialization in FastAPI.
 class AnimeSchema(BaseModel):
@@ -63,7 +78,6 @@ class AnimeSchema(BaseModel):
 class UserSchema(BaseModel):
     id:       int
     username: str
-    password: str
 
     class Config:
         from_attributes = True
@@ -71,6 +85,37 @@ class UserSchema(BaseModel):
 class UserCreateSchema(BaseModel):
     username: str
     password: str
+
+    class Config:
+        from_attributes = True
+
+class RatingSchema(BaseModel):
+    id:              int
+    user_id:         int
+    anime_id:        int
+    animation:       float
+    story:           float
+    characters:      float
+    world_building:  float
+    openings:        float
+    endings:         float
+    ost:             float
+    pacing:          float
+
+    class Config:
+        from_attributes = True
+
+class RatingCreateSchema(BaseModel):
+    user_id:         int
+    anime_id:        int
+    animation:       float
+    story:           float
+    characters:      float
+    world_building:  float
+    openings:        float
+    endings:         float
+    ost:             float
+    pacing:          float
 
     class Config:
         from_attributes = True
@@ -87,11 +132,11 @@ def get_db():
 app = FastAPI(title="MyAnimeRate API")
 
 # ── Routes for Anime Management ────────────────────────────────────────────────
-@app.get("/animes", response_model=list[AnimeSchema], summary="Get all animes", tags=["Anime"])
+@app.get("/animes", response_model=list[AnimeSchema], summary="Get all animes", tags=["Animes"])
 def getAllAnimes(db: Session = Depends(get_db)):
     return db.query(Anime).all()
 
-@app.get("/animes/search-by-name/{name}", response_model=list[AnimeSchema], summary="Search animes by name", tags=["Anime"])
+@app.get("/animes/search/{name}", response_model=list[AnimeSchema], summary="Search animes by name", tags=["Animes"])
 def getAnimeByName(name: str, db: Session = Depends(get_db)):
     results = db.query(Anime).filter(Anime.title.ilike(f"%{name}%")).all()
     if not results:
@@ -100,7 +145,7 @@ def getAnimeByName(name: str, db: Session = Depends(get_db)):
 
 
 # ── Routes for Users Management ────────────────────────────────────────────────
-@app.post("/users/create", response_model=UserSchema, summary="Create a new user", tags=["User"])
+@app.post("/users/create", response_model=UserSchema, summary="Create a new user", tags=["Users"])
 def createUser(user: UserCreateSchema, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
@@ -112,7 +157,7 @@ def createUser(user: UserCreateSchema, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
-@app.put("/users/update-by-username/{username}", response_model=UserSchema, summary="Update an existing user", tags=["User"])
+@app.put("/users/update/{username}", response_model=UserSchema, summary="Update an existing user", tags=["Users"])
 def updateUserByUsername(username: str, user: UserSchema, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == username).first()
     if not db_user:
@@ -123,7 +168,7 @@ def updateUserByUsername(username: str, user: UserSchema, db: Session = Depends(
     db.refresh(db_user)
     return db_user
 
-@app.delete("/users/delete-by-username/{username}", summary="Delete a user by username", tags=["User"])
+@app.delete("/users/delete/{username}", summary="Delete a user by username", tags=["Users"])
 def deleteUserByUsername(username: str, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == username).first()
     if not db_user:
@@ -132,3 +177,38 @@ def deleteUserByUsername(username: str, db: Session = Depends(get_db)):
     db.commit()
     return {"detail": f"User with username {username} deleted successfully"}
 
+
+# ── Routes for Ratings Management ───────────────────────────────────────────────
+@app.post("/ratings/create", response_model=RatingSchema, summary="Create a new rating", tags=["Ratings"])
+def createRating(rating: RatingCreateSchema, db: Session = Depends(get_db)):
+    # Check if user exists
+    db_user = db.query(User).filter(User.id == rating.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail=f"User with id {rating.user_id} not found")
+
+    # Check if anime exists
+    db_anime = db.query(Anime).filter(Anime.id == rating.anime_id).first()
+    if not db_anime:
+        raise HTTPException(status_code=404, detail=f"Anime with id {rating.anime_id} not found")
+    
+    # Check if the user has already rated this anime
+    existing_rating = db.query(Rating).filter(Rating.user_id == rating.user_id, Rating.anime_id == rating.anime_id).first()
+    if existing_rating:
+        raise HTTPException(status_code=400, detail=f"User with id {rating.user_id} has already rated anime with id {rating.anime_id}")
+
+    new_rating = Rating(**rating.model_dump())
+    db.add(new_rating)
+    db.commit()
+    db.refresh(new_rating)
+    return new_rating
+
+@app.put("/ratings/update/{rating_id}", response_model=RatingSchema, summary="Update an existing rating", tags=["Ratings"])
+def updateRatingById(rating_id: int, rating: RatingCreateSchema, db: Session = Depends(get_db)):
+    db_rating = db.query(Rating).filter(Rating.id == rating_id).first()
+    if not db_rating:
+        raise HTTPException(status_code=404, detail=f"Rating with id {rating_id} not found")
+    for key, value in rating.model_dump(exclude={"user_id", "anime_id"}).items():
+        setattr(db_rating, key, value)
+    db.commit()
+    db.refresh(db_rating)
+    return db_rating
