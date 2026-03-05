@@ -86,31 +86,21 @@ def get_db():
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="MyAnimeRate API")
 
-# ── Routes for Anime Management ─────────────────────────────────────────────────
-
-@app.get("/animes", response_model=list[AnimeSchema], summary="Get all animes")
+# ── Routes for Anime Management ────────────────────────────────────────────────
+@app.get("/animes", response_model=list[AnimeSchema], summary="Get all animes", tags=["Anime"])
 def getAllAnimes(db: Session = Depends(get_db)):
     return db.query(Anime).all()
 
-
-@app.get("/animes/search/by-name", response_model=list[AnimeSchema], summary="Search animes by name")
-def getAnimeByName(name: str = Query(..., min_length=1, description="Partial or full anime title"), db: Session = Depends(get_db)):
+@app.get("/animes/search-by-name/{name}", response_model=list[AnimeSchema], summary="Search animes by name", tags=["Anime"])
+def getAnimeByName(name: str, db: Session = Depends(get_db)):
     results = db.query(Anime).filter(Anime.title.ilike(f"%{name}%")).all()
     if not results:
         raise HTTPException(status_code=404, detail=f"No anime found with name '{name}'")
     return results
 
 
-@app.get("/animes/{anime_id}", response_model=AnimeSchema, summary="Get an anime by ID")
-def getAnimeById(anime_id: int, db: Session = Depends(get_db)):
-    anime = db.query(Anime).filter(Anime.id == anime_id).first()
-    if not anime:
-        raise HTTPException(status_code=404, detail=f"Anime with id {anime_id} not found")
-    return anime
-
-# ── Routes for Users Management ─────────────────────────────────────────────────
-
-@app.post("/users", response_model=UserSchema, summary="Create a new user")
+# ── Routes for Users Management ────────────────────────────────────────────────
+@app.post("/users/create", response_model=UserSchema, summary="Create a new user", tags=["User"])
 def createUser(user: UserCreateSchema, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
@@ -122,27 +112,23 @@ def createUser(user: UserCreateSchema, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
-@app.put("/users/{user_id}", response_model=UserSchema, summary="Update an existing user")
-def updateUser(user_id: int, user: UserSchema, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.id == user_id).first()
+@app.put("/users/update-by-username/{username}", response_model=UserSchema, summary="Update an existing user", tags=["User"])
+def updateUserByUsername(username: str, user: UserSchema, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.username == username).first()
     if not db_user:
-        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+        raise HTTPException(status_code=404, detail=f"User with username {username} not found")
     for key, value in user.model_dump(exclude={"id"}).items():
         setattr(db_user, key, value)
     db.commit()
     db.refresh(db_user)
     return db_user
 
-@app.get("/users/{user_id}", response_model=UserSchema, summary="Get a user by ID")
-def getUserById(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
-    return user
-
-@app.get("/users", response_model=UserSchema, summary="Get a user by username")
-def getUserByUsername(username: str = Query(..., min_length=1, description="Username of the user to retrieve"), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
-    if not user:
+@app.delete("/users/delete-by-username/{username}", summary="Delete a user by username", tags=["User"])
+def deleteUserByUsername(username: str, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.username == username).first()
+    if not db_user:
         raise HTTPException(status_code=404, detail=f"User with username {username} not found")
-    return user
+    db.delete(db_user)
+    db.commit()
+    return {"detail": f"User with username {username} deleted successfully"}
+
