@@ -16,9 +16,10 @@ function App() {
   // Variables
   const theme = isDark ? 'lavender-dark' : 'lavender-light';
   const [page, setPage] = useState(0);
+  const [query, setQuery] = useState('');
 
   return (
-    <div data-theme={theme} className="min-h-screen min-w-screen bg-base-200 flex flex-col">
+    <div data-theme={theme} className="min-h-screen max-w-screen bg-base-200 flex flex-col">
       {/* NavBar */}
       <nav className="navbar bg-secondary text-primary-content shadow-sm">
         {/* Logo + Title */}
@@ -53,7 +54,11 @@ function App() {
 
       </nav>
 
-      {/* Search Bar */}
+      {/* Search Bar with Search Button*/}
+      <div className="flex items-center gap-2 p-4 self-center">
+        <input type="text" placeholder="Search for an anime..." className="input input-primary w-96 focus:outline-none" value={query} onChange={(e) => setQuery(e.target.value)}/>
+        <button className="btn btn-primary">Search</button>
+      </div>
 
       {/* List of Animes */}
 
