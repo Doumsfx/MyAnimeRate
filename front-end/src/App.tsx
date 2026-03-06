@@ -3,6 +3,7 @@ import AnimeGirl from '../assets/anime_girl.svg?react';
 import Sun from '../assets/sun.svg?react';
 import Moon from '../assets/moon.svg?react';
 import Profile from '../assets/profile.svg?react';
+import AnimeCard from './components/AnimeCard';
 
 function App() {
   // State for theme (dark/light)
@@ -16,7 +17,7 @@ function App() {
   // Variables
   const theme = isDark ? 'lavender-dark' : 'lavender-light';
   const [page, setPage] = useState(0);
-  const [query, setQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <div data-theme={theme} className="min-h-screen max-w-screen bg-base-200 flex flex-col">
@@ -56,11 +57,23 @@ function App() {
 
       {/* Search Bar with Search Button*/}
       <div className="flex items-center gap-2 p-4 self-center">
-        <input type="text" placeholder="Search for an anime..." className="input input-primary w-96 focus:outline-none" value={query} onChange={(e) => setQuery(e.target.value)}/>
+        <input type="text" placeholder="Search for an anime..." className="input input-primary w-96 focus:outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}/>
         <button className="btn btn-primary">Search</button>
       </div>
 
       {/* List of Animes */}
+      <div className="flex flex-wrap gap-6 justify-center p-4">
+        <AnimeCard title="Attack on Titan" imageUrl="https://cdn.myanimelist.net/images/anime/10/47347.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+        <AnimeCard title="Fullmetal Alchemist: Brotherhood" imageUrl="https://cdn.myanimelist.net/images/anime/1223/96541.jpg" isFavorite={false} onToggleFavorite={() => {}} />
+        <AnimeCard title="Death Note" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+        <AnimeCard title="Attack on Titan" imageUrl="https://cdn.myanimelist.net/images/anime/10/47347.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+        <AnimeCard title="Fullmetal Alchemist: Brotherhood" imageUrl="https://cdn.myanimelist.net/images/anime/1223/96541.jpg" isFavorite={false} onToggleFavorite={() => {}} />
+        <AnimeCard title="Death Note" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+        <AnimeCard title="Attack on Titan" imageUrl="https://cdn.myanimelist.net/images/anime/10/47347.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+        <AnimeCard title="Fullmetal Alchemist: Brotherhood" imageUrl="https://cdn.myanimelist.net/images/anime/1223/96541.jpg" isFavorite={false} onToggleFavorite={() => {}} />
+        <AnimeCard title="Death Note" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+      </div>
+    
 
       {/* Page Switcher */}
 
