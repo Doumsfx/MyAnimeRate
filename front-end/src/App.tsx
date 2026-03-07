@@ -37,6 +37,7 @@ function App() {
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
 
+  // Fetch animes and favorites on mount
   useEffect(() => {
     fetch('http://localhost:8000/animes?start_id=1&end_id=50')
       .then(res => res.json())
@@ -53,6 +54,7 @@ function App() {
       .catch(err => console.error('Failed to fetch favorites:', err));
   }, []);
 
+  /// Function to toggle favorite status of an anime
   const toggleFavorite = (animeId: number) => {
     const isFav = favoriteIds.has(animeId);
     const url = isFav ? 'http://localhost:8000/favorites/remove' : 'http://localhost:8000/favorites/add';
@@ -77,6 +79,27 @@ function App() {
       .catch(err => console.error('Failed to toggle favorite:', err));
   };
 
+
+  /// Function to search animes by title
+  const searchAnimes = () => {
+    if (!searchQuery.trim()) {
+      fetch('http://localhost:8000/animes?start_id=1&end_id=50')
+        .then(res => res.json())
+        .then((data: Anime[]) => setAnimes(data))
+        .catch(err => console.error('Failed to search animes:', err));
+    } else {
+      fetch(`http://localhost:8000/animes/search/${encodeURIComponent(searchQuery)}`)
+        .then(res => res.json())
+        .then((data: Anime[]) => setAnimes(data))
+        .catch(err => console.error('Failed to search animes:', err));
+    }
+  };
+
+
+  // ---------------------------------------------------------------------------------------
+
+
+  // Front-end Part
   return (
     <div data-theme={theme} className="min-h-screen max-w-screen bg-base-200 flex flex-col">
       {/* NavBar */}
@@ -116,7 +139,7 @@ function App() {
       {/* Search Bar with Search Button*/}
       <div className="flex items-center gap-2 p-4 self-center">
         <input type="text" placeholder="Search for an anime..." className="input input-primary w-96 focus:outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}/>
-        <button className="btn btn-primary">Search</button>
+        <button className="btn btn-primary" onClick={searchAnimes}>Search</button>
       </div>
 
       {/* List of Animes */}
