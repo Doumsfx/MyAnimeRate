@@ -103,7 +103,7 @@ function App() {
   return (
     <div data-theme={theme} className="min-h-screen max-w-screen bg-base-200 flex flex-col">
       {/* NavBar */}
-      <nav className="navbar bg-secondary text-primary-content shadow-sm">
+      <nav className="navbar bg-secondary text-primary-content shadow-sm sticky top-0 z-10">
         {/* Logo + Title */}
         <div className="flex items-center gap-2">
           <AnimeGirl className="w-10 h-10 fill-red" />
