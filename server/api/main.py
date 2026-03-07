@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from pydantic import BaseModel
@@ -160,6 +161,13 @@ def sortByScore(list: list[Anime]) -> list[Anime]:
 
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="MyAnimeRate API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ── Routes for Anime Management ────────────────────────────────────────────────

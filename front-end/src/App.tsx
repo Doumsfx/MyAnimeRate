@@ -18,6 +18,64 @@ function App() {
   const theme = isDark ? 'lavender-dark' : 'lavender-light';
   const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const userID = 1;
+  
+  // API calls
+  interface Anime {
+    id: number;
+    title: string;
+    score: number | null;
+    synopsis: string | null;
+    image_url: string;
+    category: string | null;
+    episodes: number | null;
+    genres: string | null;
+    themes: string | null;
+    streaming_platforms: string | null;
+  }
+
+  const [animes, setAnimes] = useState<Anime[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    fetch('http://localhost:8000/animes?start_id=1&end_id=50')
+      .then(res => res.json())
+      .then((data: Anime[]) => setAnimes(data))
+      .catch(err => console.error('Failed to fetch animes:', err));
+
+    fetch(`http://localhost:8000/favorites/${userID}`)
+      .then(res => res.json())
+      .then((data: Anime[]) => {
+        const ids = new Set(data.map(a => a.id));
+        setFavoriteIds(ids);
+        console.log('Favorites loaded:', [...ids]);
+      })
+      .catch(err => console.error('Failed to fetch favorites:', err));
+  }, []);
+
+  const toggleFavorite = (animeId: number) => {
+    const isFav = favoriteIds.has(animeId);
+    const url = isFav ? 'http://localhost:8000/favorites/remove' : 'http://localhost:8000/favorites/add';
+    const method = isFav ? 'DELETE' : 'POST';
+
+    console.log(`${isFav ? 'Removing' : 'Adding'} anime ${animeId} from favorites...`);
+
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userID, anime_id: animeId }),
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to toggle favorite');
+        setFavoriteIds(prev => {
+          const next = new Set(prev);
+          if (isFav) next.delete(animeId);
+          else next.add(animeId);
+          return next;
+        });
+      })
+      .catch(err => console.error('Failed to toggle favorite:', err));
+  };
 
   return (
     <div data-theme={theme} className="min-h-screen max-w-screen bg-base-200 flex flex-col">
@@ -26,7 +84,7 @@ function App() {
         {/* Logo + Title */}
         <div className="flex items-center gap-2">
           <AnimeGirl className="w-10 h-10 fill-red" />
-          <text className="text-xl font-bold">MyAnimeRate</text>
+          <h1 className="text-xl font-bold">MyAnimeRate</h1>
         </div>
 
         {/* Options */}
@@ -63,19 +121,15 @@ function App() {
 
       {/* List of Animes */}
       <div className="flex flex-wrap gap-6 justify-center p-4">
-        <AnimeCard title="Attack on Titan" imageUrl="https://cdn.myanimelist.net/images/anime/10/47347.jpg" isFavorite={true} onToggleFavorite={() => {}} />
-        <AnimeCard title="Fullmetal Alchemist: Brotherhood" imageUrl="https://cdn.myanimelist.net/images/anime/1223/96541.jpg" isFavorite={false} onToggleFavorite={() => {}} />
-        <AnimeCard title="Death Note" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
-        <AnimeCard title="Attack on Titan" imageUrl="https://cdn.myanimelist.net/images/anime/10/47347.jpg" isFavorite={true} onToggleFavorite={() => {}} />
-        <AnimeCard title="Fullmetal Alchemist: Brotherhood" imageUrl="https://cdn.myanimelist.net/images/anime/1223/96541.jpg" isFavorite={false} onToggleFavorite={() => {}} />
-        <AnimeCard title="Death Note" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
-        <AnimeCard title="Attack on Titan" imageUrl="https://cdn.myanimelist.net/images/anime/10/47347.jpg" isFavorite={true} onToggleFavorite={() => {}} />
-        <AnimeCard title="Fullmetal Alchemist: Brotherhood" imageUrl="https://cdn.myanimelist.net/images/anime/1223/96541.jpg" isFavorite={false} onToggleFavorite={() => {}} />
-        <AnimeCard title="Death Note for a while" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
-        <AnimeCard title="Death Note for a while" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
-        <AnimeCard title="Death Note for a while" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
-        <AnimeCard title="Death Note for a while" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
-        <AnimeCard title="Death Note for a while" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+        {animes.map(anime => (
+          <AnimeCard
+            key={anime.id}
+            title={anime.title}
+            imageUrl={anime.image_url}
+            isFavorite={favoriteIds.has(anime.id)}
+            onToggleFavorite={() => toggleFavorite(anime.id)}
+          />
+        ))}
       </div>
     
 
