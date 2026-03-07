@@ -25,7 +25,7 @@ function App() {
       <nav className="navbar bg-secondary text-primary-content shadow-sm">
         {/* Logo + Title */}
         <div className="flex items-center gap-2">
-          <AnimeGirl className="w-10 h-10 fill-current" />
+          <AnimeGirl className="w-10 h-10 fill-red" />
           <text className="text-xl font-bold">MyAnimeRate</text>
         </div>
 
@@ -43,14 +43,14 @@ function App() {
             <input type="checkbox" className="theme-controller" checked={isDark} onChange={() => setIsDark(!isDark)}/>
             
             {/* Sun Icon */}
-            <Sun className="swap-off w-7 h-7 fill-current" />
+            <Sun className="swap-off w-7 h-7 text-current" />
 
             {/* Moon Icon */}
-            <Moon className="swap-on w-7 h-7 fill-current" />
+            <Moon className="swap-on w-7 h-7 text-current" />
           </label>
 
           {/* User Menu */}
-          <Profile className="w-8 h-7 fill-current"/>
+          <Profile className="w-8 h-7 text-current"/>
         </div>
 
       </nav>
@@ -71,7 +71,11 @@ function App() {
         <AnimeCard title="Death Note" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
         <AnimeCard title="Attack on Titan" imageUrl="https://cdn.myanimelist.net/images/anime/10/47347.jpg" isFavorite={true} onToggleFavorite={() => {}} />
         <AnimeCard title="Fullmetal Alchemist: Brotherhood" imageUrl="https://cdn.myanimelist.net/images/anime/1223/96541.jpg" isFavorite={false} onToggleFavorite={() => {}} />
-        <AnimeCard title="Death Note" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+        <AnimeCard title="Death Note for a while" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+        <AnimeCard title="Death Note for a while" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+        <AnimeCard title="Death Note for a while" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+        <AnimeCard title="Death Note for a while" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
+        <AnimeCard title="Death Note for a while" imageUrl="https://cdn.myanimelist.net/images/anime/9/9453.jpg" isFavorite={true} onToggleFavorite={() => {}} />
       </div>
     
 
