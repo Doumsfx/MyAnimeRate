@@ -47,6 +47,8 @@ CREATE TABLE rating (
     endings         REAL        NOT NULL,
     ost             REAL        NOT NULL,
     pacing          REAL        NOT NULL,
+    global_note     REAL        GENERATED ALWAYS AS 
+    ((animation + story + characters + world_building + openings + endings + ost + pacing) / 8) STORED,
     UNIQUE (user_id, anime_id)   -- a user can only rate an anime once
 );
 

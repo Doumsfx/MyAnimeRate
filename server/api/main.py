@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, Float, Text
+from sqlalchemy import create_engine, Column, Integer, String, Float, Text, Computed
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from pydantic import BaseModel
 from typing import Optional
@@ -58,6 +58,7 @@ class Rating(Base):
     endings         = Column(Float, nullable=False)
     ost             = Column(Float, nullable=False)
     pacing          = Column(Float, nullable=False)
+    global_note     = Column(Float, Computed("(animation + story + characters + world_building + openings + endings + ost + pacing) / 8"))
 
 class Favorite(Base):
     __tablename__ = "favorite"
@@ -186,9 +187,11 @@ def getAnimeByName(name: str, db: Session = Depends(get_db)):
 
 @app.get("/animes/rated/{user_id}", response_model=list[AnimeSchema], summary="Get all animes that the user rates", tags=["Animes"])
 def getAllAnimeThatUserRates(user_id: int, db: Session = Depends(get_db)):
-    ratings = db.query(Rating).filter(Rating.user_id == user_id).all()
+    ratings = db.query(Rating).filter(Rating.user_id == user_id).order_by(Rating.global_note.desc()).all()
     anime_ids = [rating.anime_id for rating in ratings]
     animes = db.query(Anime).filter(Anime.id.in_(anime_ids)).all()
+    order = {aid: i for i, aid in enumerate(anime_ids)}
+    animes.sort(key=lambda a: order[a.id])
     return animes
 
 
