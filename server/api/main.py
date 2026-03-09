@@ -291,6 +291,23 @@ def getSpecificRating(user_id: int, anime_id: int, db: Session = Depends(get_db)
     
     return db_rating
 
+@app.get("/ratings/{user_id}", response_model=list[RatingSchema], summary="Get all ratings of a user", tags=["Ratings"])
+def getAllRatingsByUser(user_id: int, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+    return db.query(Rating).filter(Rating.user_id == user_id).all()
+
+
+@app.delete("/ratings/delete/{rating_id}", summary="Delete a rating by id", tags=["Ratings"])
+def deleteRatingById(rating_id: int, db: Session = Depends(get_db)):
+    db_rating = db.query(Rating).filter(Rating.id == rating_id).first()
+    if not db_rating:
+        raise HTTPException(status_code=404, detail=f"Rating with id {rating_id} not found")
+    db.delete(db_rating)
+    db.commit()
+    return {"detail": f"Rating with id {rating_id} deleted successfully"}
+
 
 # ── Routes for Favorite Management ───────────────────────────────────────────────
 @app.post("/favorites/add", summary="Add an anime to user's favorites", tags=["Favorites"])

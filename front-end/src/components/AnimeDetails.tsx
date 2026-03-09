@@ -30,6 +30,7 @@ interface AnimeDetailsProps {
     onClose: () => void;
     existingRating: RatingData | null;
     onSaveRatings: (ratings: RatingData) => void;
+    onDeleteRatings: () => void;
 }
 
 // Define the rating fields with their corresponding labels and icons
@@ -58,14 +59,14 @@ const decodeHtmlEntities = (text: string): string => {
     return textarea.value;
 };
 
-function AnimeDetails({ title, synopsis, image_url, category, episodes, genres, themes, streaming_platforms, isFavorite, onToggleFavorite, existingRating, onSaveRatings }: AnimeDetailsProps) {
+function AnimeDetails({ title, synopsis, image_url, category, episodes, genres, themes, streaming_platforms, isFavorite, onToggleFavorite, existingRating, onSaveRatings, onDeleteRatings }: AnimeDetailsProps) {
     const [ratings, setRatings] = useState<RatingData>(existingRating ?? defaultRatings);
 
     useEffect(() => {
         setRatings(existingRating ?? defaultRatings);
     }, [existingRating]);
 
-    const average = +(Object.values(ratings).reduce((a, b) => a + b, 0) / Object.values(ratings).length).toFixed(1);
+    const average = +(ratingFields.map(f => ratings[f.key]).reduce((a, b) => a + b, 0) / ratingFields.length).toFixed(1);
 
     // Handle slider changes
     const handleSliderChange = (key: keyof RatingData, value: number) => {
@@ -153,13 +154,30 @@ function AnimeDetails({ title, synopsis, image_url, category, episodes, genres, 
                     ))}
                 </div>
 
-                {/* Save Button */}
-                <button
-                    className="btn btn-neutral w-full mt-6"
-                    onClick={() => onSaveRatings(ratings)}
-                >
-                    Save Ratings
-                </button>
+                {/* Save Button + Delete Button */}
+                <div className="flex justify-evenly">
+                    <button
+                        className="btn btn-neutral w-1/3 mt-6"
+                        onClick={() => onSaveRatings(ratings)}
+                    >
+                        Save Ratings
+                    </button>
+
+                    {existingRating && (
+                    <button
+                        className="btn btn-error w-1/3 mt-6"
+                        onClick={() => {
+                            if (window.confirm('Are you sure you want to delete your ratings for this anime?')) {
+                                onDeleteRatings();
+                            }
+                        }}
+                    >
+                        Delete Ratings
+                    </button>
+                    )}
+
+
+                </div>
             </div>
         </div>
     );

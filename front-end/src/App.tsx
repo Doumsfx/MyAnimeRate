@@ -50,12 +50,17 @@ function App() {
     global_note?: number;
   }
 
+  interface UserRating extends RatingData {
+    id: number;
+    user_id: number;
+    anime_id: number;
+  }
+
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [ratedAnimes, setRatedAnimes] = useState<Anime[]>([]);
   const [favoriteAnimes, setFavoriteAnimes] = useState<Anime[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
-  const [ratingsCache, setRatingsCache] = useState<Map<number, RatingData & { ratingId: number }>>(new Map());
-  const [currentRating, setCurrentRating] = useState<RatingData | null>(null);
+  const [userRatings, setUserRatings] = useState<UserRating[]>([]);
 
   // Fetch animes and favorites on mount
   useEffect(() => {
@@ -79,14 +84,7 @@ function App() {
         if (!res.ok) throw new Error('Failed to fetch ratings');
         return res.json();
       })
-      .then((data: (RatingData & { id: number; user_id: number; anime_id: number })[]) => {
-        const cache = new Map<number, RatingData & { ratingId: number }>();
-        data.forEach(r => {
-          const { id, user_id, anime_id, ...ratingData } = r;
-          cache.set(anime_id, { ...ratingData, ratingId: id });
-        });
-        setRatingsCache(cache);
-      })
+      .then((data: UserRating[]) => setUserRatings(data))
       .catch(err => console.error('Failed to fetch ratings:', err));
   }, []);
 
@@ -176,19 +174,16 @@ function App() {
   };
 
   
-  /// Function to get existing rating for an anime from cache
-  const getRating = (animeId: number): RatingData | null => {
-    const cached = ratingsCache.get(animeId);
-    if (!cached) return null;
-    const { ratingId, ...ratingData } = cached;
-    return ratingData;
+  /// Function to get existing rating for an anime
+  const getRating = (animeId: number): UserRating | null => {
+    return userRatings.find(r => r.anime_id === animeId) ?? null;
   };
 
   /// Function to save Ratings (create or update)
   const saveRatings = (animeId: number, ratings: RatingData) => {
-    const existing = ratingsCache.get(animeId);
+    const existing = userRatings.find(r => r.anime_id === animeId);
     const url = existing
-      ? `http://localhost:8000/ratings/update/${existing.ratingId}`
+      ? `http://localhost:8000/ratings/update/${existing.id}`
       : 'http://localhost:8000/ratings/create';
     const method = existing ? 'PUT' : 'POST';
 
@@ -201,12 +196,30 @@ function App() {
         if (!res.ok) throw new Error('Failed to save ratings');
         return res.json();
       })
-      .then((data: RatingData & { id: number; user_id: number; anime_id: number }) => {
-        const { id, user_id, anime_id, ...ratingData } = data;
-        setRatingsCache(prev => new Map(prev).set(animeId, { ...ratingData, ratingId: id }));
-        setCurrentRating(ratingData);
+      .then((data: UserRating) => {
+        setUserRatings(prev => {
+          const filtered = prev.filter(r => r.anime_id !== animeId);
+          return [...filtered, data];
+        });
+        fetchRatedAnimes();
       })
       .catch(err => console.error('Failed to save ratings:', err));
+  };
+
+
+  /// Function to delete ratings
+  const deleteRating = (animeId: number) => {
+    const existing = userRatings.find(r => r.anime_id === animeId);
+    if (!existing) return;
+    fetch(`http://localhost:8000/ratings/delete/${existing.id}`, {
+      method: 'DELETE',
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to delete rating');
+        setUserRatings(prev => prev.filter(r => r.id !== existing.id));
+        setRatedAnimes(prev => prev.filter(a => a.id !== animeId));
+      })
+      .catch(err => console.error('Failed to delete rating:', err));
   };
 
   // ---------------------------------------------------------------------------------------
@@ -268,10 +281,9 @@ function App() {
             onToggleFavorite={() => toggleFavorite(anime.id)}
             onClick={() => {
               setSelectedAnime(anime);
-              setCurrentRating(getRating(anime.id));
               setModalOpen(true);
             }}
-            existingRatingScore={ratingsCache.get(anime.id)?.global_note ?? null}
+            existingRatingScore={getRating(anime.id)?.global_note ?? null}
           />
         ))}
       </div>
@@ -295,9 +307,10 @@ function App() {
             streaming_platforms={selectedAnime?.streaming_platforms || null}
             isFavorite={favoriteIds.has(selectedAnime?.id || 0)}
             onToggleFavorite={() => selectedAnime && toggleFavorite(selectedAnime.id)}
-            existingRating={currentRating}
+            existingRating={getRating(selectedAnime.id)}
             onClose={() => setModalOpen(false)}
             onSaveRatings={(ratings) => { saveRatings(selectedAnime.id, ratings); setModalOpen(false); }}
+            onDeleteRatings={() => { deleteRating(selectedAnime.id); setModalOpen(false); }}
           />
           </div>
         </div>
