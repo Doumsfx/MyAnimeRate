@@ -47,9 +47,12 @@ function App() {
     endings: number;
     ost: number;
     pacing: number;
+    global_note?: number;
   }
 
   const [animes, setAnimes] = useState<Anime[]>([]);
+  const [ratedAnimes, setRatedAnimes] = useState<Anime[]>([]);
+  const [favoriteAnimes, setFavoriteAnimes] = useState<Anime[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [ratingsCache, setRatingsCache] = useState<Map<number, RatingData & { ratingId: number }>>(new Map());
   const [currentRating, setCurrentRating] = useState<RatingData | null>(null);
@@ -66,10 +69,48 @@ function App() {
       .then((data: Anime[]) => {
         const ids = new Set(data.map(a => a.id));
         setFavoriteIds(ids);
-        console.log('Favorites loaded:', [...ids]);
+        setFavoriteAnimes(data);
       })
       .catch(err => console.error('Failed to fetch favorites:', err));
+
+    fetch(`http://localhost:8000/ratings/${userID}`)
+      .then(res => {
+        if (res.status === 404) return [];
+        if (!res.ok) throw new Error('Failed to fetch ratings');
+        return res.json();
+      })
+      .then((data: (RatingData & { id: number; user_id: number; anime_id: number })[]) => {
+        const cache = new Map<number, RatingData & { ratingId: number }>();
+        data.forEach(r => {
+          const { id, user_id, anime_id, ...ratingData } = r;
+          cache.set(anime_id, { ...ratingData, ratingId: id });
+        });
+        setRatingsCache(cache);
+      })
+      .catch(err => console.error('Failed to fetch ratings:', err));
   }, []);
+
+  /// Fetch rated animes and favorites when switching pages
+  const fetchRatedAnimes = () => {
+    fetch(`http://localhost:8000/animes/rated/${userID}`)
+      .then(res => {
+        if (res.status === 404) return [];
+        if (!res.ok) throw new Error('Failed to fetch rated animes');
+        return res.json();
+      })
+      .then((data: Anime[]) => setRatedAnimes(data))
+      .catch(err => console.error('Failed to fetch rated animes:', err));
+  };
+
+  const fetchFavoriteAnimes = () => {
+    fetch(`http://localhost:8000/favorites/${userID}`)
+      .then(res => res.json())
+      .then((data: Anime[]) => {
+        setFavoriteAnimes(data);
+        setFavoriteIds(new Set(data.map(a => a.id)));
+      })
+      .catch(err => console.error('Failed to fetch favorites:', err));
+  };
 
     // Disable scroll when modal is open 
   useEffect(() => {
@@ -131,31 +172,12 @@ function App() {
   };
 
   
-  /// Function to fetch existing rating for an anime
-  const fetchRating = (animeId: number) => {
+  /// Function to get existing rating for an anime from cache
+  const getRating = (animeId: number): RatingData | null => {
     const cached = ratingsCache.get(animeId);
-    if (cached) {
-      const { ratingId, ...ratingData } = cached;
-      setCurrentRating(ratingData);
-      return;
-    }
-    fetch(`http://localhost:8000/ratings/${userID}/${animeId}`)
-      .then(res => {
-        if (res.status === 404) {
-          setCurrentRating(null);
-          return null;
-        }
-        if (!res.ok) throw new Error('Failed to fetch rating');
-        return res.json();
-      })
-      .then((data: (RatingData & { id: number; user_id: number; anime_id: number }) | null) => {
-        if (data) {
-          const { id, user_id, anime_id, ...ratingData } = data;
-          setCurrentRating(ratingData);
-          setRatingsCache(prev => new Map(prev).set(animeId, { ...ratingData, ratingId: id }));
-        }
-      })
-      .catch(err => console.error('Failed to fetch rating:', err));
+    if (!cached) return null;
+    const { ratingId, ...ratingData } = cached;
+    return ratingData;
   };
 
   /// Function to save Ratings (create or update)
@@ -200,8 +222,8 @@ function App() {
         {/* Options */}
         <div className="flex items-center gap-2 ml-5">
           <button className={`btn btn-ghost btn-secondary text-secondary-content border-0 px-3 ${page === 0 ? 'btn-active' : ''}`} onClick={() => setPage(0)}>All Animes</button>
-          <button className={`btn btn-ghost btn-secondary text-secondary-content border-0 px-3 ${page === 1 ? 'btn-active' : ''}`} onClick={() => setPage(1)}>My Rates</button>
-          <button className={`btn btn-ghost btn-secondary text-secondary-content border-0 px-3 ${page === 2 ? 'btn-active' : ''}`} onClick={() => setPage(2)}>Favorites</button>
+          <button className={`btn btn-ghost btn-secondary text-secondary-content border-0 px-3 ${page === 1 ? 'btn-active' : ''}`} onClick={() => { setPage(1); fetchRatedAnimes(); }}>My Rates</button>
+          <button className={`btn btn-ghost btn-secondary text-secondary-content border-0 px-3 ${page === 2 ? 'btn-active' : ''}`} onClick={() => { setPage(2); fetchFavoriteAnimes(); }}>Favorites</button>
         </div>
 
         {/* Theme Switcher + User Menu */}
@@ -231,7 +253,7 @@ function App() {
 
       {/* List of Animes */}
       <div className="flex flex-wrap gap-6 justify-center p-4">
-        {animes.map(anime => (
+        {(page === 0 ? animes : page === 1 ? ratedAnimes : favoriteAnimes).map(anime => (
           <AnimeCard
             key={anime.id}
             title={anime.title}
@@ -240,10 +262,10 @@ function App() {
             onToggleFavorite={() => toggleFavorite(anime.id)}
             onClick={() => {
               setSelectedAnime(anime);
-              setCurrentRating(null);
-              fetchRating(anime.id);
+              setCurrentRating(getRating(anime.id));
               setModalOpen(true);
             }}
+            existingRatingScore={ratingsCache.get(anime.id)?.global_note ?? null}
           />
         ))}
       </div>

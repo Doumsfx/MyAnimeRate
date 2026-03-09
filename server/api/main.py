@@ -111,6 +111,7 @@ class RatingSchema(BaseModel):
     endings:         float
     ost:             float
     pacing:          float
+    global_note:     Optional[float]
 
     class Config:
         from_attributes = True
@@ -263,6 +264,13 @@ def updateRatingById(rating_id: int, rating: RatingCreateSchema, db: Session = D
     db.commit()
     db.refresh(db_rating)
     return db_rating
+
+@app.get("/ratings/{user_id}", response_model=list[RatingSchema], summary="Get all ratings of a user", tags=["Ratings"])
+def getAllRatingsByUser(user_id: int, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+    return db.query(Rating).filter(Rating.user_id == user_id).all()
 
 @app.get("/ratings/{user_id}/{anime_id}", response_model=RatingSchema, summary="Get a specific rating", tags=["Ratings"])
 def getSpecificRating(user_id: int, anime_id: int, db: Session = Depends(get_db)):
