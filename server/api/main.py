@@ -184,6 +184,13 @@ def getAnimeByName(name: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=f"No anime found with name '{name}'")
     return results
 
+@app.get("/animes/rated/{user_id}", response_model=list[AnimeSchema], summary="Get all animes that the user rates", tags=["Animes"])
+def getAllAnimeThatUserRates(user_id: int, db: Session = Depends(get_db)):
+    ratings = db.query(Rating).filter(Rating.user_id == user_id).all()
+    anime_ids = [rating.anime_id for rating in ratings]
+    animes = db.query(Anime).filter(Anime.id.in_(anime_ids)).all()
+    return animes
+
 
 # ── Routes for Users Management ────────────────────────────────────────────────
 @app.post("/users/create", response_model=UserSchema, summary="Create a new user", tags=["Users"])
