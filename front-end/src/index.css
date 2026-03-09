@@ -32,7 +32,8 @@
   --color-info: #8987ab;
   --color-success: #565478;
   --color-warning: #a7a5c0;
-  --color-error: #6c6996;
+  --color-error: #FF3939;
+  --color-error-content: #f0f0f5;
 }
 
 @plugin "daisyui/theme" {
@@ -61,5 +62,6 @@
   --color-info: #8987ab;
   --color-success: #565478;
   --color-warning: #a7a5c0;
-  --color-error: #6c6996;
+  --color-error: #E42222;
+  --color-error-content: #f0f0f5;
 }

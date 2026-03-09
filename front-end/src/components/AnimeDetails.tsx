@@ -156,13 +156,6 @@ function AnimeDetails({ title, synopsis, image_url, category, episodes, genres, 
 
                 {/* Save Button + Delete Button */}
                 <div className="flex justify-evenly">
-                    <button
-                        className="btn btn-neutral w-1/3 mt-6"
-                        onClick={() => onSaveRatings(ratings)}
-                    >
-                        Save Ratings
-                    </button>
-
                     {existingRating && (
                     <button
                         className="btn btn-error w-1/3 mt-6"
@@ -175,8 +168,12 @@ function AnimeDetails({ title, synopsis, image_url, category, episodes, genres, 
                         Delete Ratings
                     </button>
                     )}
-
-
+                    <button
+                        className="btn btn-neutral w-1/3 mt-6"
+                        onClick={() => onSaveRatings(ratings)}
+                    >
+                        Save Ratings
+                    </button>
                 </div>
             </div>
         </div>
