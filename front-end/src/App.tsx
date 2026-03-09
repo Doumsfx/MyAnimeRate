@@ -165,7 +165,11 @@ function App() {
         .catch(err => console.error('Failed to search animes:', err));
     } else {
       fetch(`http://localhost:8000/animes/search/${encodeURIComponent(searchQuery)}`)
-        .then(res => res.json())
+        .then(res => {
+          if (res.status === 404) return [];
+          if (!res.ok) throw new Error('Failed to search animes');
+          return res.json();
+        })
         .then((data: Anime[]) => setAnimes(data))
         .catch(err => console.error('Failed to search animes:', err));
     }
@@ -253,7 +257,9 @@ function App() {
 
       {/* List of Animes */}
       <div className="flex flex-wrap gap-6 justify-center p-4">
-        {(page === 0 ? animes : page === 1 ? ratedAnimes : favoriteAnimes).map(anime => (
+        {(page === 0 ? animes : page === 1 ? ratedAnimes : favoriteAnimes).length === 0 ? (
+          <p className="text-base-content/60 text-lg mt-10">No anime found.</p>
+        ) : (page === 0 ? animes : page === 1 ? ratedAnimes : favoriteAnimes).map(anime => (
           <AnimeCard
             key={anime.id}
             title={anime.title}
