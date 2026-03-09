@@ -4,6 +4,7 @@ import Sun from '../assets/sun.svg?react';
 import Moon from '../assets/moon.svg?react';
 import Profile from '../assets/profile.svg?react';
 import AnimeCard from './components/AnimeCard';
+import AnimeDetails from './components/AnimeDetails';
 
 function App() {
   // State for theme (dark/light)
@@ -18,7 +19,10 @@ function App() {
   const theme = isDark ? 'lavender-dark' : 'lavender-light';
   const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
   const userID = 1;
+
   
   // API calls
   interface Anime {
@@ -34,12 +38,25 @@ function App() {
     streaming_platforms: string | null;
   }
 
+  interface RatingData {
+    animation: number;
+    story: number;
+    characters: number;
+    world_building: number;
+    openings: number;
+    endings: number;
+    ost: number;
+    pacing: number;
+  }
+
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+  const [ratingsCache, setRatingsCache] = useState<Map<number, RatingData & { ratingId: number }>>(new Map());
+  const [currentRating, setCurrentRating] = useState<RatingData | null>(null);
 
   // Fetch animes and favorites on mount
   useEffect(() => {
-    fetch('http://localhost:8000/animes?start_id=1&end_id=50')
+    fetch('http://localhost:8000/animes?start_id=1&end_id=99')
       .then(res => res.json())
       .then((data: Anime[]) => setAnimes(data))
       .catch(err => console.error('Failed to fetch animes:', err));
@@ -53,6 +70,24 @@ function App() {
       })
       .catch(err => console.error('Failed to fetch favorites:', err));
   }, []);
+
+    // Disable scroll when modal is open 
+  useEffect(() => {
+    if (modalOpen) {
+      // Calculate scrollbar width
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.paddingRight = scrollbarWidth + 'px';
+    } else {
+      document.documentElement.style.overflow = 'auto';
+      document.documentElement.style.paddingRight = '';
+    }
+    return () => {
+      document.documentElement.style.overflow = 'auto';
+      document.documentElement.style.paddingRight = '';
+    };
+  }, [modalOpen]);
+
 
   /// Function to toggle favorite status of an anime
   const toggleFavorite = (animeId: number) => {
@@ -83,7 +118,7 @@ function App() {
   /// Function to search animes by title
   const searchAnimes = () => {
     if (!searchQuery.trim()) {
-      fetch('http://localhost:8000/animes?start_id=1&end_id=50')
+      fetch('http://localhost:8000/animes?start_id=1&end_id=99')
         .then(res => res.json())
         .then((data: Anime[]) => setAnimes(data))
         .catch(err => console.error('Failed to search animes:', err));
@@ -95,6 +130,58 @@ function App() {
     }
   };
 
+  
+  /// Function to fetch existing rating for an anime
+  const fetchRating = (animeId: number) => {
+    const cached = ratingsCache.get(animeId);
+    if (cached) {
+      const { ratingId, ...ratingData } = cached;
+      setCurrentRating(ratingData);
+      return;
+    }
+    fetch(`http://localhost:8000/ratings/${userID}/${animeId}`)
+      .then(res => {
+        if (res.status === 404) {
+          setCurrentRating(null);
+          return null;
+        }
+        if (!res.ok) throw new Error('Failed to fetch rating');
+        return res.json();
+      })
+      .then((data: (RatingData & { id: number; user_id: number; anime_id: number }) | null) => {
+        if (data) {
+          const { id, user_id, anime_id, ...ratingData } = data;
+          setCurrentRating(ratingData);
+          setRatingsCache(prev => new Map(prev).set(animeId, { ...ratingData, ratingId: id }));
+        }
+      })
+      .catch(err => console.error('Failed to fetch rating:', err));
+  };
+
+  /// Function to save Ratings (create or update)
+  const saveRatings = (animeId: number, ratings: RatingData) => {
+    const existing = ratingsCache.get(animeId);
+    const url = existing
+      ? `http://localhost:8000/ratings/update/${existing.ratingId}`
+      : 'http://localhost:8000/ratings/create';
+    const method = existing ? 'PUT' : 'POST';
+
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userID, anime_id: animeId, ...ratings }),
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to save ratings');
+        return res.json();
+      })
+      .then((data: RatingData & { id: number; user_id: number; anime_id: number }) => {
+        const { id, user_id, anime_id, ...ratingData } = data;
+        setRatingsCache(prev => new Map(prev).set(animeId, { ...ratingData, ratingId: id }));
+        setCurrentRating(ratingData);
+      })
+      .catch(err => console.error('Failed to save ratings:', err));
+  };
 
   // ---------------------------------------------------------------------------------------
 
@@ -138,7 +225,7 @@ function App() {
 
       {/* Search Bar with Search Button*/}
       <div className="flex items-center gap-2 p-4 self-center">
-        <input type="text" placeholder="Search for an anime..." className="input input-primary w-96 focus:outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}/>
+        <input type="text" placeholder="Search for an anime..." className="input input-primary w-96 focus:outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && searchAnimes()}/>
         <button className="btn btn-primary" onClick={searchAnimes}>Search</button>
       </div>
 
@@ -151,12 +238,42 @@ function App() {
             imageUrl={anime.image_url}
             isFavorite={favoriteIds.has(anime.id)}
             onToggleFavorite={() => toggleFavorite(anime.id)}
+            onClick={() => {
+              setSelectedAnime(anime);
+              setCurrentRating(null);
+              fetchRating(anime.id);
+              setModalOpen(true);
+            }}
           />
         ))}
       </div>
     
 
       {/* Page Switcher */}
+
+      {/* Modal for Anime Details */}
+      {modalOpen && selectedAnime != null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-20" onClick={() => setModalOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()}>
+          <AnimeDetails
+            title={selectedAnime?.title || ''}
+            score={selectedAnime?.score || null}
+            synopsis={selectedAnime?.synopsis || null}
+            image_url={selectedAnime?.image_url?.replace(/\.jpg$/, 'l.jpg') || ''}
+            category={selectedAnime?.category || null}
+            episodes={selectedAnime?.episodes || null}
+            genres={selectedAnime?.genres || null}
+            themes={selectedAnime?.themes || null}
+            streaming_platforms={selectedAnime?.streaming_platforms || null}
+            isFavorite={favoriteIds.has(selectedAnime?.id || 0)}
+            onToggleFavorite={() => selectedAnime && toggleFavorite(selectedAnime.id)}
+            existingRating={currentRating}
+            onClose={() => setModalOpen(false)}
+            onSaveRatings={(ratings) => { saveRatings(selectedAnime.id, ratings); setModalOpen(false); }}
+          />
+          </div>
+        </div>
+      )}
 
     </div>
   )

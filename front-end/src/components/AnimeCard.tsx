@@ -6,15 +6,16 @@ interface AnimeCardProps {
     imageUrl: string;
     isFavorite: boolean;
     onToggleFavorite: () => void;
+    onClick: () => void;
 }
 
-function AnimeCard({ title, imageUrl, isFavorite, onToggleFavorite }: AnimeCardProps) {
+function AnimeCard({ title, imageUrl, isFavorite, onToggleFavorite, onClick }: AnimeCardProps) {
     
     return (
-        <div className="card w-36 bg-base-300 shadow-xl">
+        <div className="card w-36 bg-base-300 shadow-xl cursor-pointer" onClick={onClick}>
             <figure className="relative h-52">
                 <img src={imageUrl} alt={title} className="w-full h-full object-cover"/>
-                <button onClick={onToggleFavorite} className="absolute top-1 right-1 btn btn-circle btn-sm bg-black/65 border-none outline-none hover:bg-black/60">
+                <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }} className="absolute top-1 right-1 btn btn-circle btn-sm bg-black/65 border-none outline-none hover:bg-black/60">
                     {isFavorite ? <FavoriteRed className="w-5 h-5" /> : <Favorite className="w-5 h-5" />}
                 </button>
             </figure>
